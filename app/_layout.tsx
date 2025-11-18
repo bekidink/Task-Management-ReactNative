@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useEffect } from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function RootLayout() {
   const { user, loading, init } = useAuthStore();
@@ -12,7 +13,7 @@ export default function RootLayout() {
     init();
     console.log("lg",loading)
   }, []);
-
+console.log(user)
   // if (loading) {
   //   return (
   //     <View className="flex-1 justify-center items-center bg-indigo-600">
@@ -24,10 +25,12 @@ export default function RootLayout() {
   // }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" redirect={!user} />
-      <Stack.Screen name="(auth)" redirect={!!user} />
-      <Stack.Screen name="+not-found" />
-    </Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" redirect={!user} />
+        <Stack.Screen name="(auth)" redirect={!!user} />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+    </GestureHandlerRootView>
   );
 }
