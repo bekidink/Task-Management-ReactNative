@@ -201,13 +201,7 @@ export default function HomeScreen() {
         <View className="h-40" />
       </ScrollView>
 
-      <View className="absolute right-5" style={{ bottom: insets.bottom + 80 }}>
-        <Link href="/tasks/new" asChild>
-          <Pressable className="h-14 w-14 items-center justify-center rounded-2xl bg-purple-600 shadow-2xl">
-            <Plus size={28} color="white" />
-          </Pressable>
-        </Link>
-      </View>
+      
     </View>
   );
 }

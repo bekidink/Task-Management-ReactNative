@@ -63,6 +63,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="messages"
+        options={{
+          title: 'Messages',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbox-outline" size={size} color={color} />
+          ),
+          tabBarIconStyle: { marginTop: Platform.OS === 'ios' ? 8 : 0 },
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
