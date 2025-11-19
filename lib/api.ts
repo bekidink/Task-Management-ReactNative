@@ -3,11 +3,11 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 const api = axios.create({
-  baseURL: 'https://your-api.et',
+  baseURL: 'http://10.55.163.157:3000',
 });
 
 api.interceptors.request.use(async (config) => {
-  const token = await SecureStore.getItemAsync('tasker_jwt_token');
+  const token = await SecureStore.getItemAsync('tasker_backend_jwt');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

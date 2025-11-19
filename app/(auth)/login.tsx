@@ -32,7 +32,7 @@ export default function Login() {
     try {
     const res=  await signIn(email.trim().toLowerCase(), password);
     console.log('res',res)
-      router.replace('/(tabs)' as never); // Go to main app
+      router.replace('/(tabs)/home' as never); // Go to main app
     } catch (error: any) {
       Alert.alert('Login Failed', error.message || 'የተሳሳተ ኢሜይል ወይም የይለፍ ቃል');
     } finally {
@@ -48,10 +48,10 @@ export default function Login() {
         {/* Logo */}
         <View className="mb-12 items-center">
           <View className="mb-4 rounded-full bg-white/20 p-6">
-            <Text className="text-6xl font-bold text-white">Tasker</Text>
+            <Text className="text-6xl font-bold ">Tasker</Text>
           </View>
-          <Text className="mt-2 text-2xl font-bold text-white">Welcome Back!</Text>
-          <Text className="mt-2 text-center text-white/80">እንደገና መጡ!</Text>
+          <Text className="mt-2 text-2xl font-bold ">Welcome Back!</Text>
+          <Text className="mt-2 text-center ">እንደገና መጡ!</Text>
         </View>
 
         {/* Form */}
@@ -60,7 +60,7 @@ export default function Login() {
 
           {/* Email */}
           <View className="mb-5">
-            <View className="flex-row items-center rounded-xl border border-gray-300 bg-gray-50 px-4 py-4">
+            <View className="flex-row items-center rounded-xl border border-gray-300 bg-gray-50 px-4 py-1">
               <Mail className="mr-3 text-indigo-600" size={24} />
               <TextInput
                 placeholder="Email"
@@ -76,7 +76,7 @@ export default function Login() {
 
           {/* Password */}
           <View className="mb-6">
-            <View className="flex-row items-center rounded-xl border border-gray-300 bg-gray-50 px-4 py-4">
+            <View className="flex-row items-center rounded-xl border border-gray-300 bg-gray-50 px-4 py-1">
               <Lock className="mr-3 text-indigo-600" size={24} />
               <TextInput
                 placeholder="Password"
@@ -93,7 +93,7 @@ export default function Login() {
           <TouchableOpacity
             onPress={handleLogin}
             disabled={loading}
-            className="flex-row items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 py-4">
+            className="flex-row bg-black items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 py-4">
             {loading ? (
               <Loader2 className="animate-spin text-white" size={24} />
             ) : (
@@ -109,12 +109,7 @@ export default function Login() {
                 Register
               </Link>
             </Text>
-            <Text className="mt-2 text-gray-600">
-              መለያ የለዎትም?{' '}
-              <Link href="/(auth)/register" className="font-bold text-indigo-600">
-                ይመዝገቡ
-              </Link>
-            </Text>
+            
           </View>
         </View>
 
