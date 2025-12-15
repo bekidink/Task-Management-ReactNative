@@ -16,3 +16,9 @@ export const updateTaskStatus = (id: string, status: 'TODO' | 'IN_PROGRESS' | 'D
 
 export const updateTaskFlag = (id: string, flagged: boolean) =>
   api.patch(`/tasks/${id}`, { flag: flagged ? 'FLAGGED' : 'NORMAL' });
+export const getTaskById = (id: string) => api.get(`/tasks/${id}`);
+
+export const createComment = ({ taskId, content }: { taskId: string; content: string }) =>
+  api.post(`/tasks/${taskId}/comments`, { taskId, content });
+export const uploadCommentFile = ({ taskId, content }: { taskId: string; content: string }) =>
+  api.post(`/tasks/${taskId}/comments`, { taskId, content });

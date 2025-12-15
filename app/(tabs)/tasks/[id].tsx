@@ -1,6 +1,17 @@
 // app/(tabs)/task/[id].tsx
-import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Image, Alert } from 'react-native';
+import React, { useState, useRef, useMemo } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  TextInput,
+  Image,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -11,179 +22,233 @@ import {
   Image as ImageIcon,
   MessageCircle,
   Send,
-  Share2,
-  Link,
-  Trash2,
-  FolderOpen,
-  Plus,
+  Paperclip,
+  X,
+  AtSign,
 } from 'lucide-react-native';
 import Popover from 'react-native-popover-view';
+import * as DocumentPicker from 'expo-document-picker';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getTaskById, createComment, uploadCommentFile } from '@/lib/services/tasks';
+import { getProjectMembers } from '@/lib/services/projects';
+
+type Task = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  project: { id: string; name: string; ownerId: string };
+  assignee: { id: string; name: string; avatar: string | null } | null;
+  comments: Array<{
+    id: string;
+    content: string;
+    createdAt: string;
+    user: { id: string; name: string; avatar: string | null };
+    files: Array<{ id: string; url: string; name: string }>;
+  }>;
+};
+
+const currentUserId = '691d625d1cf9817035d54762'; // Replace with your auth context
 
 export default function TaskDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
+  const moreButtonRef = useRef<View>(null);
+
   const [comment, setComment] = useState('');
   const [showPopover, setShowPopover] = useState(false);
-  const moreButtonRef = useRef(null);
+  const [showMentionList, setShowMentionList] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState('');
 
-  const comments = [
-    {
-      id: 1,
-      name: 'Tien Tom',
-      avatar: 'https://i.pravatar.cc/150?img=1',
-      text: 'Descriptive essays test your ability to use language in an original and creative way.',
+  const { data: task, isLoading } = useQuery({
+    queryKey: ['task', id],
+    queryFn: () => getTaskById(id),
+    select: (res) => res.data,
+  });
+
+  const { data: members = [] } = useQuery({
+    queryKey: ['project-members', task?.project.id],
+    queryFn: () => getProjectMembers(task!.project.id),
+    enabled: !!task,
+    select: (res) => res.data || [],
+  });
+
+  const isOwner = task?.project.ownerId === currentUserId;
+
+  const commentMutation = useMutation({
+    mutationFn: (data: { content: string; files?: any[] }) =>
+      createComment({ taskId: id, ...data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task', id] });
+      setComment('');
     },
-    {
-      id: 2,
-      name: 'Minh Ha',
-      avatar: 'https://i.pravatar.cc/150?img=5',
-      text: 'They are commonly assigned as writing exercises at high school and in composition classes.',
-    },
-  ];
+  });
 
-  const moreActions = [
-    { icon: FolderOpen, label: 'Move to', color: '#6B7280' },
-    { icon: Share2, label: 'Share', color: '#6B7280' },
-    { icon: Link, label: 'Copy link', color: '#6B7280' },
-    { icon: Trash2, label: 'Delete', color: '#EF4444' },
-  ];
+  const filteredMembers = useMemo(() => {
+    if (!mentionSearch) return [];
+    return members.filter((m: any) => m.name.toLowerCase().includes(mentionSearch.toLowerCase()));
+  }, [mentionSearch, members]);
 
-  const handleMoreAction = (action: string) => {
-    setShowPopover(false);
-
-    switch (action) {
-      case 'Move to':
-        Alert.alert('Move Task', 'Select destination project');
-        break;
-      case 'Share':
-        Alert.alert('Share Task', 'Sharing options');
-        break;
-      case 'Copy link':
-        Alert.alert('Success', 'Link copied to clipboard');
-        break;
-      case 'Delete':
-        Alert.alert(
-          'Delete Task',
-          'Are you sure you want to delete this task? This action cannot be undone.',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-            },
-            {
-              text: 'Delete',
-              style: 'destructive',
-              onPress: () => {
-                router.back();
-              },
-            },
-          ]
-        );
-        break;
+  const handleCommentChange = (text: string) => {
+    setComment(text);
+    const lastAt = text.lastIndexOf('@');
+    if (lastAt !== -1 && text.slice(lastAt).includes(' ')) {
+      setShowMentionList(false);
+      setMentionSearch('');
+    } else if (lastAt !== -1 && text[lastAt] === '@') {
+      setShowMentionList(true);
+      setMentionSearch('');
+    } else if (lastAt !== -1) {
+      setShowMentionList(true);
+      setMentionSearch(text.slice(lastAt + 1));
+    } else {
+      setShowMentionList(false);
     }
   };
 
+  const insertMention = (name: string) => {
+    const lastAt = comment.lastIndexOf('@');
+    const newComment = comment.slice(0, lastAt) + `@${name} `;
+    setComment(newComment);
+    setShowMentionList(false);
+    setMentionSearch('');
+  };
+
+  const handleFilePick = async () => {
+    const result = await DocumentPicker.getDocumentAsync({ multiple: true });
+    if (!result.canceled && result.assets) {
+      const files = result.assets.map((asset) => ({
+        uri: asset.uri,
+        name: asset.name,
+        type: asset.mimeType,
+      }));
+      // Upload and attach to comment
+      const uploaded = await Promise.all(files.map((f) => uploadCommentFile(f)));
+      commentMutation.mutate({
+        content: comment || 'Attached files',
+        files: uploaded,
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#9333EA" />
+      </View>
+    );
+  }
+
   return (
-    <View className="flex-1 bg-white">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      className="flex-1 bg-white"
+      keyboardVerticalOffset={90}>
       {/* Header */}
       <View
         style={{ paddingTop: insets.top + 10 }}
-        className="flex-row items-center justify-between border-b border-gray-100 px-5 pb-4">
+        className="flex-row items-center justify-between border-b border-gray-100 bg-white px-5 pb-4">
         <Pressable onPress={() => router.back()}>
           <ChevronLeft size={28} color="#374151" />
         </Pressable>
-
-        <Text className="text-xl font-bold text-gray-900">Wireframe</Text>
-
-        <Pressable ref={moreButtonRef} onPress={() => setShowPopover(true)} className="p-2">
+        <Text className="max-w-[70%] text-xl font-bold text-gray-900">{task?.title}</Text>
+        <Pressable ref={moreButtonRef} onPress={() => setShowPopover(true)}>
           <MoreVertical size={24} color="#6B7280" />
         </Pressable>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="px-5 pb-32 pt-6">
-          {/* Assign */}
-          <View className="mb-8 flex-row items-center">
-            <Users size={20} color="#6B7280" className="mr-3" />
-            <Text className="mr-3 text-base font-medium text-gray-900">Assign (2)</Text>
-          </View>
-          <View className="mb-10 flex-row items-center -space-x-3">
-            <Image
-              source={{ uri: 'https://i.pravatar.cc/150?img=3' }}
-              className="h-12 w-12 rounded-full border-2 border-white"
-            />
-            <Image
-              source={{ uri: 'https://i.pravatar.cc/150?img=8' }}
-              className="h-12 w-12 rounded-full border-2 border-white"
-            />
-            <Pressable className="h-12 w-12 items-center justify-center rounded-full border-2 border-dashed border-purple-400 bg-purple-100">
-              <Plus size={20} color="#9333EA" />
-            </Pressable>
-            <View className="ml-4">
-              <Text className="text-sm font-medium text-gray-900">Tien</Text>
-              <Text className="text-sm font-medium text-gray-900">Ha</Text>
+          {/* Assignee Picker - Only for Owner */}
+          {isOwner && (
+            <View className="mb-8">
+              <Text className="mb-3 text-base font-medium text-gray-900">Assign To</Text>
+              <Pressable className="flex-row items-center rounded-2xl border-2 border-purple-300 bg-purple-50 px-5 py-4">
+                {task?.assignee ? (
+                  <>
+                    <Image
+                      source={{ uri: task.assignee.avatar || 'https://i.pravatar.cc/150' }}
+                      className="mr-3 h-10 w-10 rounded-full"
+                    />
+                    <Text className="text-base font-medium text-purple-900">
+                      {task.assignee.name}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Users size={20} color="#9333EA" className="mr-3" />
+                    <Text className="text-base text-purple-700">Assign someone...</Text>
+                  </>
+                )}
+              </Pressable>
             </View>
+          )}
+
+          {/* Project */}
+          <View className="mb-6">
+            <Text className="text-sm text-gray-600">Project</Text>
+            <Text className="text-lg font-bold text-purple-900">{task?.project.name}</Text>
           </View>
 
-          {/* Due Date */}
-          <View className="mb-4 flex-row items-center">
-            <Calendar size={20} color="#6B7280" className="mr-3" />
-            <Text className="text-base font-medium text-gray-900">Due date</Text>
-          </View>
-          <View className="mb-10 flex-row justify-between">
-            <View className="flex-row items-center rounded-2xl bg-purple-100 px-5 py-3">
-              <Calendar size={18} color="#9333EA" className="mr-2" />
-              <View>
-                <Text className="font-medium text-purple-700">Jan 1 2021</Text>
-                <Text className="text-xs text-purple-600">9:00 AM</Text>
-              </View>
-            </View>
-            <View className="flex-row items-center rounded-2xl bg-purple-100 px-5 py-3">
-              <Calendar size={18} color="#9333EA" className="mr-2" />
-              <View>
-                <Text className="font-medium text-purple-700">Jan 1 2021</Text>
-                <Text className="text-xs text-purple-600">9:00 AM</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Description */}
-          <View className="mb-6 flex-row items-start">
-            <MessageCircle size={20} color="#6B7280" className="mr-3 mt-1" />
-            <View className="flex-1">
-              <Text className="mb-2 text-base font-medium text-gray-900">Description</Text>
-              <Text className="leading-6 text-gray-600">
-                A descriptive essay gives a vivid, detailed description of something—generally a
-                place or object.
+          {/* Priority */}
+          <View className="mb-6">
+            <Text className="text-sm text-gray-600">Priority</Text>
+            <View
+              className={`mt-1 inline-flex rounded-full px-4 py-2 ${
+                task?.priority === 'HIGH'
+                  ? 'bg-red-100'
+                  : task?.priority === 'MEDIUM'
+                    ? 'bg-yellow-100'
+                    : 'bg-green-100'
+              }`}>
+              <Text
+                className={`font-bold ${
+                  task?.priority === 'HIGH'
+                    ? 'text-red-700'
+                    : task?.priority === 'MEDIUM'
+                      ? 'text-yellow-700'
+                      : 'text-green-700'
+                }`}>
+                {task?.priority}
               </Text>
             </View>
           </View>
 
-          {/* Image */}
-          <View className="mb-10 flex-row items-start">
-            <ImageIcon size={20} color="#6B7280" className="mr-3 mt-1" />
-            <Text className="mb-3 text-base font-medium text-gray-900">Image</Text>
-          </View>
-          <View className="flex-row items-center space-x-4">
-            <Image
-              source={{ uri: 'https://picsum.photos/400/300' }}
-              className="h-20 w-28 rounded-2xl"
-            />
-            <Pressable className="h-20 w-28 items-center justify-center rounded-2xl border-2 border-dashed border-purple-400">
-              <Plus size={28} color="#9333EA" />
-            </Pressable>
-          </View>
-
           {/* Comments */}
-          <View className="mt-10">
-            <Text className="mb-5 text-base font-medium text-gray-900">Comment</Text>
-            {comments.map((c) => (
+          <View className="mt-8">
+            <Text className="mb-5 text-lg font-bold text-gray-900">
+              Activity ({task?.comments.length || 0})
+            </Text>
+
+            {task?.comments.map((c) => (
               <View key={c.id} className="mb-6 flex-row">
-                <Image source={{ uri: c.avatar }} className="mr-3 h-10 w-10 rounded-full" />
+                <Image
+                  source={{ uri: c.author.avatar || 'https://i.pravatar.cc/150' }}
+                  className="mr-3 h-10 w-10 rounded-full"
+                />
                 <View className="flex-1">
-                  <Text className="font-medium text-gray-900">{c.name}</Text>
-                  <Text className="mt-1 text-sm leading-5 text-gray-600">{c.text}</Text>
+                  <View className="rounded-2xl bg-gray-50 px-4 py-3">
+                    <Text className="font-semibold text-gray-900">{c.author.name}</Text>
+                    <Text className="mt-1 whitespace-pre-wrap text-gray-700">{c.content}</Text>
+                    {/* {c.files.length > 0 && (
+                      <View className="mt-3 space-y-2">
+                        {c.files.map((f) => (
+                          <Pressable
+                            key={f.id}
+                            className="flex-row items-center rounded-xl bg-white px-3 py-2">
+                            <Paperclip size={16} color="#9333EA" />
+                            <Text className="ml-2 text-sm text-purple-700">{f.name}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    )} */}
+                  </View>
+                  <Text className="ml-1 mt-2 text-xs text-gray-500">
+                    {new Date(c.createdAt).toLocaleString()}
+                  </Text>
                 </View>
               </View>
             ))}
@@ -191,59 +256,48 @@ export default function TaskDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Comment Input */}
-      <View className="absolute bottom-0 left-0 right-0 flex-row items-center border-t border-gray-200 bg-white px-5 py-4">
-        <TextInput
-          placeholder="Post your comment"
-          value={comment}
-          onChangeText={setComment}
-          className="mr-3 flex-1 rounded-2xl bg-gray-100 px-4 py-3 text-base"
-        />
-        <Pressable>
-          <Send size={24} color="#9333EA" />
-        </Pressable>
-      </View>
-
-      {/* More Actions Popover */}
-      <Popover
-        isVisible={showPopover}
-        onRequestClose={() => setShowPopover(false)}
-        from={moreButtonRef!}
-        backgroundStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
-        popoverStyle={{
-          backgroundColor: 'white',
-          borderRadius: 16,
-          padding: 8,
-          shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: 2,
-          },
-          shadowOpacity: 0.25,
-          shadowRadius: 12,
-          elevation: 5,
-        }}
-       
-        offset={10}>
-        <View className="w-48">
-          {moreActions.map((action, index) => (
-            <Pressable
-              key={action.label}
-              onPress={() => handleMoreAction(action.label)}
-              className={`flex-row items-center px-4 py-3 ${
-                index < moreActions.length - 1 ? 'border-b border-gray-100' : ''
-              } active:bg-gray-50`}>
-              <action.icon size={20} color={action.color} className="mr-3" />
-              <Text
-                className={`text-base font-medium ${
-                  action.label === 'Delete' ? 'text-red-500' : 'text-gray-900'
-                }`}>
-                {action.label}
-              </Text>
+      {/* Comment Input with @mentions & file */}
+      <View className="border-t border-gray-200 bg-white px-5 py-4">
+        <View className="relative">
+          <View className="flex-row items-center">
+            <TextInput
+              placeholder="Add a comment... (@ to mention)"
+              value={comment}
+              onChangeText={handleCommentChange}
+              multiline
+              className="mr-3 flex-1 rounded-2xl bg-gray-100 px-4 py-3 text-base"
+            />
+            <Pressable onPress={handleFilePick} className="mr-2">
+              <Paperclip size={24} color="#9333EA" />
             </Pressable>
-          ))}
+            <Pressable
+              onPress={() => commentMutation.mutate({ content: comment || 'Sent a file' })}
+              disabled={!comment.trim() && commentMutation.isPending}>
+              <Send size={24} color={comment.trim() ? '#9333EA' : '#9CA3AF'} />
+            </Pressable>
+          </View>
+
+          {/* @mention dropdown */}
+          {showMentionList && filteredMembers.length > 0 && (
+            <View className="absolute bottom-full left-4 right-4 mb-2 max-h-64 rounded-2xl border border-gray-200 bg-white shadow-lg">
+              <ScrollView nestedScrollEnabled>
+                {filteredMembers.map((member: any) => (
+                  <Pressable
+                    key={member.id}
+                    onPress={() => insertMention(member.name)}
+                    className="flex-row items-center border-b border-gray-100 px-4 py-3 last:border-0">
+                    <Image
+                      source={{ uri: member.avatar || 'https://i.pravatar.cc/150' }}
+                      className="mr-3 h-8 w-8 rounded-full"
+                    />
+                    <Text className="text-base text-gray-900">{member.name}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
-      </Popover>
-    </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }

@@ -11,7 +11,17 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, useRouter } from 'expo-router';
-import { Search, Plus, ChevronLeft, X, Check, Circle, Flag, Clock } from 'lucide-react-native';
+import {
+  Search,
+  Plus,
+  ChevronLeft,
+  X,
+  Check,
+  Circle,
+  Flag,
+  Clock,
+  ChevronDown,
+} from 'lucide-react-native';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -29,6 +39,12 @@ type Task = {
   flagged?: boolean;
 };
 
+type Project = {
+  id: string;
+  name: string;
+  _count: { tasks: number };
+};
+
 type TabType = 'assigned' | 'created';
 
 export default function TasksScreen() {
@@ -39,12 +55,12 @@ export default function TasksScreen() {
   const snapPoints = useMemo(() => ['94%'], []);
 
   const [activeTab, setActiveTab] = useState<TabType>('assigned');
-
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
 
-  // Fetch real tasks based on tab
+  // Fetch tasks
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks', activeTab],
     queryFn: activeTab === 'assigned' ? getMyAssignedTasks : getMyCreatedTasks,
@@ -55,13 +71,14 @@ export default function TasksScreen() {
       })),
   });
 
-  // Fetch projects for create form
-  const { data: projects = [] } = useQuery({
+  // Fetch real projects for dropdown
+  const { data: projects = [], isLoading: projectsLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: getProjects,
-    select: (res) => res.data,
+    select: (res) => res.data || [],
   });
 
+  // Auto-select first project
   React.useEffect(() => {
     if (projects.length > 0 && !selectedProject) {
       setSelectedProject(projects[0]);
@@ -72,34 +89,13 @@ export default function TasksScreen() {
     mutationFn: createTask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', activeTab] });
-      queryClient.invalidateQueries({
-        queryKey: ['tasks', activeTab === 'assigned' ? 'created' : 'assigned'],
-      });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       bottomSheetRef.current?.close();
       setTitle('');
       setDescription('');
-      Alert.alert('Success', 'Task created!');
+      Alert.alert('Success', 'Task created successfully!');
     },
-  });
-
-  const completeMutation = useMutation({
-    mutationFn: (id: string) =>
-      fetch(`http://localhost:3000/tasks/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'DONE' }),
-      }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
-  });
-
-  const flagMutation = useMutation({
-    mutationFn: (id: string) =>
-      fetch(`http://localhost:3000/tasks/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ flag: 'FLAGGED' }),
-      }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+    onError: (error: any) => Alert.alert('Error', error.message || 'Failed to create task'),
   });
 
   const openSheet = () => bottomSheetRef.current?.snapToIndex(0);
@@ -107,34 +103,18 @@ export default function TasksScreen() {
     bottomSheetRef.current?.close();
     setTitle('');
     setDescription('');
+    setShowProjectDropdown(false);
   };
 
-  const renderRightActions = (task: Task) => (
-    <View className="flex-row">
-      <Pressable
-        onPress={() => flagMutation.mutate(task.id)}
-        className="justify-center bg-purple-600 px-6">
-        <Flag size={24} color="white" fill={task.flagged ? 'white' : 'none'} />
-      </Pressable>
-      {task.status !== 'DONE' && (
-        <Pressable
-          onPress={() => completeMutation.mutate(task.id)}
-          className="justify-center bg-green-500 px-6">
-          <Check size={24} color="white" />
-        </Pressable>
-      )}
-    </View>
-  );
-
   const onCreate = () => {
-    if (!title.trim()) return Alert.alert('Error', 'Task name required');
-    if (!selectedProject) return Alert.alert('Error', 'Select a project');
+    if (!title.trim()) return Alert.alert('Error', 'Task name is required');
+    if (!selectedProject) return Alert.alert('Error', 'Please select a project');
 
     createMutation.mutate({
       title: title.trim(),
       description: description || null,
       projectId: selectedProject.id,
-      priority: 'MEDIUM',
+      priority: 'MEDIUM' as const,
     });
   };
 
@@ -156,30 +136,23 @@ export default function TasksScreen() {
           </Pressable>
         </View>
 
-        {/* Search */}
         <View className="mb-4 flex-row items-center rounded-2xl border border-gray-200 bg-white px-4 py-3.5 shadow-sm">
           <Search size={20} color="#9CA3AF" className="mr-3" />
           <TextInput placeholder="Search tasks..." className="flex-1 text-gray-700" />
         </View>
 
-        {/* Tabs */}
         <View className="flex-row rounded-2xl bg-white p-1 shadow-sm">
-          <Pressable
-            onPress={() => setActiveTab('assigned')}
-            className={`flex-1 rounded-xl py-3 ${activeTab === 'assigned' ? 'bg-purple-600' : ''}`}>
-            <Text
-              className={`text-center font-semibold ${activeTab === 'assigned' ? 'text-white' : 'text-gray-600'}`}>
-              Assigned to Me
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setActiveTab('created')}
-            className={`flex-1 rounded-xl py-3 ${activeTab === 'created' ? 'bg-purple-600' : ''}`}>
-            <Text
-              className={`text-center font-semibold ${activeTab === 'created' ? 'text-white' : 'text-gray-600'}`}>
-              Created by Me
-            </Text>
-          </Pressable>
+          {(['assigned', 'created'] as const).map((tab) => (
+            <Pressable
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              className={`flex-1 rounded-xl py-3 ${activeTab === tab ? 'bg-purple-600' : ''}`}>
+              <Text
+                className={`text-center font-semibold ${activeTab === tab ? 'text-white' : 'text-gray-600'}`}>
+                {tab === 'assigned' ? 'Assigned to Me' : 'Created by Me'}
+              </Text>
+            </Pressable>
+          ))}
         </View>
       </View>
 
@@ -191,15 +164,29 @@ export default function TasksScreen() {
       ) : tasks.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">
           <Text className="text-center text-lg text-gray-500">
-            {activeTab === 'assigned' ? 'No tasks assigned tasks' : 'No tasks created by you'}
+            {activeTab === 'assigned' ? 'No tasks assigned to you' : 'No tasks created by you'}
           </Text>
         </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false}>
           <View className="mt-6 space-y-4 px-5 pb-40">
             {tasks.map((task: Task) => (
-              <Swipeable key={task.id} renderRightActions={() => renderRightActions(task)}>
-                <Pressable
+              <Swipeable
+                key={task.id}
+                renderRightActions={() => (
+                  <View className="flex-row">
+                    <Pressable className="justify-center bg-purple-600 px-6">
+                      <Flag size={24} color="white" fill={task.flagged ? 'white' : 'none'} />
+                    </Pressable>
+                    {task.status !== 'DONE' && (
+                      <Pressable className="justify-center bg-green-500 px-6">
+                        <Check size={24} color="white" />
+                      </Pressable>
+                    )}
+                  </View>
+                )}>
+                <Link
+ href={`/tasks/${task.id}`}
                   className={`rounded-3xl border-2 bg-white p-5 shadow-sm ${task.flagged ? 'border-purple-500' : 'border-gray-100'}`}>
                   <View className="mb-3 flex-row items-start justify-between">
                     <Text
@@ -215,7 +202,10 @@ export default function TasksScreen() {
                     <View className="mb-3 flex-row items-center">
                       <Clock size={16} color="#9333EA" className="mr-2" />
                       <Text className="text-sm text-purple-700">
-                        {new Date(task.endDate).toLocaleDateString()}
+                        {new Date(task.endDate).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
                       </Text>
                     </View>
                   )}
@@ -231,14 +221,14 @@ export default function TasksScreen() {
                       {task.status === 'DONE' ? 'Completed' : 'Mark as done'}
                     </Text>
                   </View>
-                </Pressable>
+                </Link>
               </Swipeable>
             ))}
           </View>
         </ScrollView>
       )}
 
-      {/* CREATE TASK SHEET */}
+      {/* CREATE TASK BOTTOM SHEET */}
       <BottomSheet
         ref={bottomSheetRef}
         index={-1}
@@ -257,19 +247,59 @@ export default function TasksScreen() {
 
           <BottomSheetScrollView>
             <View className="px-6 pb-20 pt-4">
+              {/* Task Name */}
               <Text className="mb-2 text-sm text-gray-700">Task Name</Text>
               <TextInput
                 placeholder="Enter task title"
                 value={title}
                 onChangeText={setTitle}
-                className="mb-6 rounded-2xl border-2 border-purple-300 bg-white px-5 py-4"
+                className="mb-6 rounded-2xl border-2 border-purple-300 bg-white px-5 py-4 text-base"
               />
 
+              {/* Project Dropdown */}
               <Text className="mb-2 text-sm text-gray-700">Project</Text>
-              <Pressable className="mb-6 rounded-2xl bg-gray-50 px-4 py-3">
-                <Text className="text-base">{selectedProject?.name || 'Select project'}</Text>
+              <Pressable
+                onPress={() => setShowProjectDropdown(!showProjectDropdown)}
+                className="mb-2 flex-row items-center justify-between rounded-2xl border-2 border-purple-300 bg-white px-5 py-4">
+                <Text className="text-base text-gray-900">
+                  {selectedProject?.name || 'Select a project'}
+                </Text>
+                <ChevronDown size={20} color="#9333EA" />
               </Pressable>
 
+              {/* Dropdown List */}
+              {showProjectDropdown && (
+                <View className="mb-6 max-h-64 rounded-2xl border-2 border-purple-200 bg-white shadow-lg">
+                  <ScrollView nestedScrollEnabled>
+                    {projectsLoading ? (
+                      <View className="py-4">
+                        <ActivityIndicator color="#9333EA" />
+                      </View>
+                    ) : projects.length === 0 ? (
+                      <Text className="py-4 text-center text-gray-500">No projects found</Text>
+                    ) : (
+                      projects.map((project: Project) => (
+                        <Pressable
+                          key={project.id}
+                          onPress={() => {
+                            setSelectedProject(project);
+                            setShowProjectDropdown(false);
+                          }}
+                          className="border-b border-gray-100 px-5 py-4 last:border-b-0">
+                          <Text className="text-base font-medium text-gray-900">
+                            {project.name}
+                          </Text>
+                          <Text className="text-xs text-gray-500">
+                            {project._count.tasks} tasks
+                          </Text>
+                        </Pressable>
+                      ))
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Description */}
               <Text className="mb-2 text-sm text-gray-700">Description (optional)</Text>
               <TextInput
                 placeholder="Add description..."
@@ -277,20 +307,20 @@ export default function TasksScreen() {
                 onChangeText={setDescription}
                 multiline
                 className="rounded-2xl border-2 border-purple-300 bg-white px-5 py-4"
-                style={{ textAlignVertical: 'top', height: 100 }}
+                style={{ textAlignVertical: 'top', height: 120 }}
               />
 
+              {/* Create Button */}
               <Pressable
                 onPress={onCreate}
-                disabled={createMutation.isPending || !title.trim()}
-                className={`mt-8 flex-row justify-center rounded-2xl py-4 ${title.trim() ? 'bg-purple-600' : 'bg-gray-300'}`}>
+                disabled={createMutation.isPending || !title.trim() || !selectedProject}
+                className={`mt-10 rounded-2xl py-5 ${
+                  title.trim() && selectedProject ? 'bg-purple-600' : 'bg-gray-300'
+                }`}>
                 {createMutation.isPending ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text
-                    className={`text-lg font-bold ${title.trim() ? 'text-white' : 'text-gray-500'}`}>
-                    Create Task Right Arrow
-                  </Text>
+                  <Text className="text-center text-lg font-bold text-white">Create Task</Text>
                 )}
               </Pressable>
             </View>

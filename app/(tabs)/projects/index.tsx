@@ -187,40 +187,40 @@ export default function ProjectsScreen() {
               <Text className="mt-20 text-center text-gray-500">No projects yet</Text>
             ) : (
               projects.map((p: Project) => (
-                <Pressable
-                  key={p.id}
-                  className="rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
-                  <View className="mb-3 flex-row items-center justify-between">
-                    <Text className="text-lg font-bold text-gray-900">{p.name}</Text>
-                    <View className="flex-row -space-x-2">
-                      <View className="h-9 w-9 rounded-full border-2 border-white bg-gray-300" />
-                      <View className="h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-purple-100">
-                        <Text className="text-xs font-bold text-purple-600">+1</Text>
+                <Link href={`/projects/${p.id}`} key={p.id} asChild>
+                  <Pressable className="rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
+                    <View className="mb-3 flex-row items-center justify-between">
+                      <Text className="text-lg font-bold text-gray-900">{p.name}</Text>
+                      <View className="flex-row -space-x-2">
+                        <View className="h-9 w-9 rounded-full border-2 border-white bg-gray-300" />
+                        <View className="h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-purple-100">
+                          <Text className="text-xs font-bold text-purple-600">+1</Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
 
-                  <Text className="mb-3 text-sm text-gray-600">{p.owner.name}</Text>
+                    <Text className="mb-3 text-sm text-gray-600">{p.owner.name}</Text>
 
-                  {(p.startDate || p.endDate) && (
-                    <View className="mb-3 flex-row items-center text-xs text-gray-500">
-                      <Text>{formatDate(new Date(p.startDate || new Date()))}</Text>
-                      <Text className="mx-2">Right Arrow</Text>
-                      <Text>{formatDate(new Date(p.endDate || new Date()))}</Text>
+                    {(p.startDate || p.endDate) && (
+                      <View className="mb-3 flex-row items-center text-xs text-gray-500">
+                        <Text>{formatDate(new Date(p.startDate || new Date()))}</Text>
+                        <Text className="mx-2">Right Arrow</Text>
+                        <Text>{formatDate(new Date(p.endDate || new Date()))}</Text>
+                      </View>
+                    )}
+
+                    <View className="mb-1 flex-row items-center justify-between">
+                      <View className="mr-4 h-3 flex-1 overflow-hidden rounded-full bg-gray-200">
+                        <View
+                          className="h-full rounded-full bg-purple-600"
+                          style={{ width: '45%' }}
+                        />
+                      </View>
+                      <Text className="text-xs text-gray-500">{p._count.tasks} tasks</Text>
                     </View>
-                  )}
-
-                  <View className="mb-1 flex-row items-center justify-between">
-                    <View className="mr-4 h-3 flex-1 overflow-hidden rounded-full bg-gray-200">
-                      <View
-                        className="h-full rounded-full bg-purple-600"
-                        style={{ width: '45%' }}
-                      />
-                    </View>
-                    <Text className="text-xs text-gray-500">{p._count.tasks} tasks</Text>
-                  </View>
-                  <Text className="text-right text-sm font-medium text-purple-600">45%</Text>
-                </Pressable>
+                    <Text className="text-right text-sm font-medium text-purple-600">45%</Text>
+                  </Pressable>
+                </Link>
               ))
             )}
           </View>

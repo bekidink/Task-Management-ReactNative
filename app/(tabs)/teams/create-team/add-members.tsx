@@ -45,7 +45,7 @@ const contacts = [
 
 export default function AddMembersScreen() {
   const router = useRouter();
-  const { selectedMembers, toggleMember } = useCreateTeamStore();
+  const { selectedMembers } = useCreateTeamStore();
   const [search, setSearch] = useState('');
 
   return (
@@ -83,11 +83,11 @@ export default function AddMembersScreen() {
           </Text>
 
           {contacts.map((c) => {
-            const isSelected = selectedMembers.some((m) => m.id === c.id);
+            const isSelected = selectedMembers.some((m) => m.id === c.id?.toString());
             return (
               <Pressable
                 key={c.id}
-                onPress={() => toggleMember(c)}
+                // onPress={() => toggleMember(c)}
                 className="flex-row items-center border-b border-gray-100 py-4">
                 <Image source={{ uri: c.avatar }} className="mr-4 h-14 w-14 rounded-full" />
                 <View className="flex-1">

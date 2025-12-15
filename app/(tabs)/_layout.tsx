@@ -16,13 +16,14 @@ export default function TabLayout() {
           backgroundColor: 'white',
           borderTopWidth: 1,
           borderTopColor: '#E5E7EB',
-          paddingBottom: Platform.OS === 'ios' ? insets.bottom : 0,
+          paddingBottom: Platform.OS === 'ios' ? insets.bottom : 20,
           height: Platform.OS === 'ios' ? 90 : 70, // Extra height for iOS safe area
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
           elevation: 3, // Android shadow
+          // marginBottom:10
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -43,16 +44,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="tasks"
-        options={{
-          title: 'Tasks',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list-outline" size={size} color={color} />
-          ),
-          tabBarIconStyle: { marginTop: Platform.OS === 'ios' ? 8 : 0 },
-        }}
-      />
-      <Tabs.Screen
         name="projects"
         options={{
           title: 'Projects',
@@ -62,6 +53,27 @@ export default function TabLayout() {
           tabBarIconStyle: { marginTop: Platform.OS === 'ios' ? 8 : 0 },
         }}
       />
+      <Tabs.Screen
+        name="teams"
+        options={{
+          title: 'Teams',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="folder-outline" size={size} color={color} />
+          ),
+          tabBarIconStyle: { marginTop: Platform.OS === 'ios' ? 8 : 0 },
+        }}
+      />
+      <Tabs.Screen
+        name="tasks"
+        options={{
+          title: 'Tasks',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="list-outline" size={size} color={color} />
+          ),
+          tabBarIconStyle: { marginTop: Platform.OS === 'ios' ? 8 : 0 },
+        }}
+      />
+
       <Tabs.Screen
         name="messages"
         options={{

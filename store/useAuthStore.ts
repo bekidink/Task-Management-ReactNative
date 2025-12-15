@@ -76,7 +76,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
 // Exchange Supabase identity → Your powerful NestJS JWT
 async function exchangeSupabaseForJwt(supabaseUid: string, email: string): Promise<string> {
-  const response = await fetch('http://10.55.163.157:3000/auth/supabase-login', {
+  const response = await fetch('http://10.168.174.157:3000/auth/supabase-login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ supabaseUid, email }),
