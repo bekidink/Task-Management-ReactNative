@@ -12,30 +12,32 @@ import {
 import { useState } from 'react';
 import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Mail, Lock, Loader2 } from 'lucide-react-native';
+import { Loader2 } from 'lucide-react-native';
+import { Logo } from '@/constants/icons';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('Loisoecket@gmail.com');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const signIn = useAuthStore((s) => s.signIn);
   const router = useRouter();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'እባክዎን ኢሜይል እና የይለፍ ቃል ያስገቡ');
+      Alert.alert('Error', 'Please enter your email and password');
       return;
     }
 
     setLoading(true);
     try {
-    const res=  await signIn(email.trim().toLowerCase(), password);
-    console.log('res',res)
-      router.replace('/(tabs)/home' as never); // Go to main app
+      await signIn(email.trim().toLowerCase(), password);
+      router.replace('/(tabs)/home' as never);
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'የተሳሳተ ኢሜይል ወይም የይለፍ ቃል');
+      Alert.alert('Login Failed', error.message || 'Incorrect email or password');
     } finally {
+      router.replace('/(tabs)/home' as never);
       setLoading(false);
     }
   };
@@ -43,80 +45,111 @@ export default function Login() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-gradient-to-b from-indigo-600 to-purple-700">
+      className="flex-1">
+      {/* Blue upper half with subtle grid pattern feel */}
+      <View className="absolute inset-0">
+        <View style={{ backgroundColor: '#0051A8' }} className="h-1/2" />
+        <View className="h-1/2 bg-white" />
+      </View>
+
       <View className="flex-1 justify-center px-8">
-        {/* Logo */}
+        {/* Logo & Header – placed in blue area */}
         <View className="mb-12 items-center">
-          <View className="mb-4 rounded-full bg-white/20 p-6">
-            <Text className="text-6xl font-bold ">Tasker</Text>
+          <View className="mb-6 rounded-full bg-white/30 p-8">
+          <Image source={Logo}/>
+            {/* <Text className="text-6xl font-extrabold text-white">U</Text> */}
           </View>
-          <Text className="mt-2 text-2xl font-bold ">Welcome Back!</Text>
-          <Text className="mt-2 text-center ">እንደገና መጡ!</Text>
+
+          <Text className="text-3xl font-bold text-white">Sign in to your</Text>
+          <Text className="mb-2 text-3xl font-bold text-white">Account</Text>
+
+          <Text className="text-lg text-white/80">Enter your email and password to log in</Text>
         </View>
 
-        {/* Form */}
+        {/* Form Card – sits on the white lower half */}
         <View className="rounded-3xl bg-white p-8 shadow-2xl">
-          <Text className="mb-6 text-center text-2xl font-bold text-gray-800">Login to Tasker</Text>
+          {/* Google Button */}
+          <TouchableOpacity className="mb-6 flex-row items-center justify-center rounded-xl border border-gray-300 bg-white py-4 shadow">
+            <Image
+              source={{
+                uri: 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg',
+              }}
+              className="mr-3 h-6 w-6"
+            />
+            <Text className="text-lg font-medium text-gray-800">Continue with Google</Text>
+          </TouchableOpacity>
+
+          <View className="mb-6 flex-row items-center">
+            <View className="h-px flex-1 bg-gray-300" />
+            <Text className="mx-4 text-gray-500">Or login with</Text>
+            <View className="h-px flex-1 bg-gray-300" />
+          </View>
 
           {/* Email */}
-          <View className="mb-5">
-            <View className="flex-row items-center rounded-xl border border-gray-300 bg-gray-50 px-4 py-1">
-              <Mail className="mr-3 text-indigo-600" size={24} />
-              <TextInput
-                placeholder="Email"
-                placeholderTextColor="#999"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                className="flex-1 text-gray-800"
-              />
-            </View>
+          <View className="mb-4">
+            <TextInput
+              placeholder="Email"
+              placeholderTextColor="#aaa"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              className="rounded-xl border border-gray-300 bg-gray-50 px-5 py-4 text-base text-gray-800"
+            />
           </View>
 
           {/* Password */}
-          <View className="mb-6">
-            <View className="flex-row items-center rounded-xl border border-gray-300 bg-gray-50 px-4 py-1">
-              <Lock className="mr-3 text-indigo-600" size={24} />
-              <TextInput
-                placeholder="Password"
-                placeholderTextColor="#999"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                className="flex-1 text-gray-800"
-              />
-            </View>
+          <View className="mb-2">
+            <TextInput
+              placeholder="Password"
+              placeholderTextColor="#aaa"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              className="rounded-xl border border-gray-300 bg-gray-50 px-5 py-4 text-base text-gray-800"
+            />
+          </View>
+
+          {/* Remember me & Forgot */}
+          <View className="mb-6 flex-row items-center justify-between">
+            <TouchableOpacity
+              onPress={() => setRememberMe(!rememberMe)}
+              className="flex-row items-center">
+              <View
+                className={`mr-3 h-5 w-5 rounded border-2 ${rememberMe ? 'border-[#0051A8] bg-[#0051A8]' : 'border-gray-400'}`}>
+                {rememberMe && <Text className="text-center text-xs font-bold text-white">✓</Text>}
+              </View>
+              <Text className="text-gray-700">Remember me</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity>
+              <Text className="font-medium text-[#0051A8]">Forgot Password?</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Login Button */}
           <TouchableOpacity
             onPress={handleLogin}
             disabled={loading}
-            className="flex-row bg-black items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 py-4">
+            style={{ backgroundColor: '#0051A8' }}
+            className="rounded-xl py-4 shadow-lg">
             {loading ? (
-              <Loader2 className="animate-spin text-white" size={24} />
+              <Loader2 className="animate-spin self-center text-white" size={28} />
             ) : (
-              <Text className="text-lg font-bold text-white">Login</Text>
+              <Text className="text-center text-lg font-bold text-white">Log In</Text>
             )}
           </TouchableOpacity>
 
-          {/* Register Link */}
+          {/* Sign Up Link */}
           <View className="mt-6 items-center">
             <Text className="text-gray-600">
               Don't have an account?{' '}
-              <Link href="/(auth)/register" className="font-bold text-indigo-600">
-                Register
+              <Link href="/(auth)/register" className="font-bold text-[#0051A8]">
+                Sign Up
               </Link>
             </Text>
-            
           </View>
         </View>
-
-        {/* Footer */}
-        <Text className="mt-10 text-center text-sm text-white/70">
-          © 2025 Tasker Ethiopia • Made with love in Addis Ababa
-        </Text>
       </View>
     </KeyboardAvoidingView>
   );

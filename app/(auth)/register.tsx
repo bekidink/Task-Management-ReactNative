@@ -5,18 +5,18 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { useState } from 'react';
 import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/useAuthStore';
-import { Mail, Lock, User, Loader2, ArrowLeft } from 'lucide-react-native';
-import SocialLoginButtons from '@/components/auth/SocialLoginButtons';
+import { Loader2, ArrowLeft, Calendar } from 'lucide-react-native';
 
 export default function Register() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState('Lois');
+  const [email, setEmail] = useState('Loisoecket@gmail.com');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -45,105 +45,104 @@ export default function Register() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-gradient-to-b from-indigo-600 to-purple-700">
-      <View className="flex-1 justify-center px-8">
-        {/* Header */}
-        <TouchableOpacity onPress={() => router.back()} className="mb-8">
+      className="flex-1">
+      {/* Background: Blue upper half, white lower half - same as login */}
+      <View className="absolute inset-0">
+        <View style={{ backgroundColor: '#0051A8' }} className="h-1/2" />
+        <View className="h-1/2 bg-white" />
+      </View>
+
+      <View className="flex-1 px-8">
+        {/* Header - Back button + Title (keeping original structure but updated styling) */}
+        <TouchableOpacity onPress={() => router.back()} className="mb-8 mt-12">
           <ArrowLeft size={28} color="white" />
         </TouchableOpacity>
 
         <View className="mb-10 items-center">
-          <Text className="text-5xl font-bold text-white">Tasker</Text>
-          <Text className="mt-3 text-xl text-white/90">Create Account</Text>
-          <Text className="text-white/80">መለያ ይፍጠሩ</Text>
+          <Text className="text-4xl font-bold text-white">Sign Up</Text>
+          <Text className="mt-3 text-lg text-white/90">Create Account</Text>
+         
+          <Text className="mt-4 text-center text-white/80">
+            Already have an account?{' '}
+            <Link href="/(auth)/login" className="font-bold text-white underline">
+              Log In
+            </Link>
+          </Text>
         </View>
 
-        {/* Form Card */}
+        {/* Form Card - Updated styling to match screenshot exactly */}
         <View className="rounded-3xl bg-white p-8 shadow-2xl">
-          {/* Name */}
-          <View className="mb-5">
-            <View className="flex-row items-center rounded-xl border border-gray-300 bg-gray-50 px-4 py-4">
-              <User className="mr-3 text-indigo-600" size={24} />
-              <TextInput
-                placeholder="Full Name"
-                value={name}
-                onChangeText={setName}
-                className="flex-1 text-gray-800"
-              />
-            </View>
+          {/* Name field - Single field like original, prefilled to match screenshot */}
+          <View className="mb-4">
+            <TextInput
+              placeholder="Full Name"
+              placeholderTextColor="#aaa"
+              value={name}
+              onChangeText={setName}
+              className="rounded-xl border border-gray-300 bg-gray-50 px-5 py-4 text-base text-gray-800"
+            />
           </View>
 
           {/* Email */}
-          <View className="mb-5">
-            <View className="flex-row items-center rounded-xl border border-gray-300 bg-gray-50 px-4 py-4">
-              <Mail className="mr-3 text-indigo-600" size={24} />
-              <TextInput
-                placeholder="Email"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                className="flex-1 text-gray-800"
-              />
-            </View>
+          <View className="mb-4">
+            <TextInput
+              placeholder="Email"
+              placeholderTextColor="#aaa"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              className="rounded-xl border border-gray-300 bg-gray-50 px-5 py-4 text-base text-gray-800"
+            />
           </View>
+
+          
+
+         
 
           {/* Password */}
           <View className="mb-6">
-            <View className="flex-row items-center rounded-xl border border-gray-300 bg-gray-50 px-4 py-4">
-              <Lock className="mr-3 text-indigo-600" size={24} />
-              <TextInput
-                placeholder="Password (6+ characters)"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                className="flex-1 text-gray-800"
-              />
-            </View>
+            <TextInput
+              placeholder="Password"
+              placeholderTextColor="#aaa"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              className="rounded-xl border border-gray-300 bg-gray-50 px-5 py-4 text-base text-gray-800"
+            />
           </View>
 
-          {/* Register Button */}
+          {/* Register Button - Updated color to match theme */}
           <TouchableOpacity
             onPress={handleRegister}
             disabled={loading}
-            className="flex-row items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 py-4">
+            style={{ backgroundColor: '#0051A8' }}
+            className="mb-6 rounded-xl py-4 shadow-lg">
             {loading ? (
-              <Loader2 className="animate-spin text-white" size={24} />
+              <Loader2 className="animate-spin self-center text-white" size={28} />
             ) : (
-              <Text className="text-lg font-bold text-white">Create Account</Text>
+              <Text className="text-center text-lg font-bold text-white">Sign Up</Text>
             )}
           </TouchableOpacity>
 
-          {/* Divider */}
+          {/* Divider - Original OR logic preserved */}
           <View className="my-6 flex-row items-center">
             <View className="h-px flex-1 bg-gray-300" />
-            <Text className="mx-4 text-gray-500">OR</Text>
+            <Text className="mx-4 font-medium text-gray-500">OR</Text>
             <View className="h-px flex-1 bg-gray-300" />
           </View>
 
-          {/* Social Login */}
-          <SocialLoginButtons />
-
-          {/* Login Link */}
-          <View className="mt-6 items-center">
-            <Text className="text-gray-600">
-              Already have an account?{' '}
-              <Link href="/(auth)/login" className="font-bold text-indigo-600">
-                Login
-              </Link>
-            </Text>
-            <Text className="mt-2 text-gray-600">
-              መለያ አለዎት?{' '}
-              <Link href="/(auth)/login" className="font-bold text-indigo-600">
-                ይግቡ
-              </Link>
-            </Text>
-          </View>
+          {/* Google Button - Simplified single Google button like screenshot */}
+          <TouchableOpacity className="mb-8 flex-row items-center justify-center rounded-xl border border-gray-300 bg-white py-4 shadow">
+            <Image
+              source={{
+                uri: 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg',
+              }}
+              className="mr-3 h-6 w-6"
+            />
+            <Text className="text-lg font-medium text-gray-800">Sign up with Google</Text>
+          </TouchableOpacity>
         </View>
-
-        <Text className="mt-10 text-center text-sm text-white/70">
-          © 2025 Tasker Ethiopia • Made in Addis Ababa
-        </Text>
       </View>
     </KeyboardAvoidingView>
   );

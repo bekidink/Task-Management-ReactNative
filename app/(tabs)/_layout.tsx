@@ -23,7 +23,7 @@ export default function TabLayout() {
           shadowOpacity: 0.1,
           shadowRadius: 4,
           elevation: 3, // Android shadow
-          // marginBottom:10
+          
         },
         tabBarLabelStyle: {
           fontSize: 12,

@@ -2,9 +2,9 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import * as SecureStore from 'expo-secure-store';
-
+const BASEURL = process.env.EXPO_PUBLIC_API!;
 const BACKEND_JWT_KEY = 'tasker_backend_jwt';
-
+console.log('bas', BASEURL);
 interface AuthState {
   user: any;
   session: any;
@@ -29,9 +29,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       data: { session },
     } = await supabase.auth.getSession();
     let backendJwt = await SecureStore.getItemAsync(BACKEND_JWT_KEY);
-
+console.log("re",session,backendJwt)
     if (session?.user && !backendJwt) {
       backendJwt = await exchangeSupabaseForJwt(session.user.id, session.user.email!);
+      console.log("res",backendJwt)
       await SecureStore.setItemAsync(BACKEND_JWT_KEY, backendJwt!);
     }
 
@@ -76,7 +77,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
 // Exchange Supabase identity → Your powerful NestJS JWT
 async function exchangeSupabaseForJwt(supabaseUid: string, email: string): Promise<string> {
-  const response = await fetch('http://10.168.174.157:3000/auth/supabase-login', {
+ 
+  const response = await fetch(`${BASEURL}/auth/supabase-login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ supabaseUid, email }),
@@ -85,5 +87,6 @@ async function exchangeSupabaseForJwt(supabaseUid: string, email: string): Promi
   if (!response.ok) throw new Error('Failed to get JWT from backend');
 
   const data = await response.json();
+  console.log("df",data)
   return data.access_token; // This is your strong NestJS JWT
 }

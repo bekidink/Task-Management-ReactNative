@@ -12,7 +12,7 @@ export const createTeam = async (data: {
   memberIds: string[];
 }) => {
   const formData = new FormData();
-const token = await SecureStore.getItemAsync('tasker_backend_jwt');
+  const token = await SecureStore.getItemAsync('tasker_backend_jwt');
   formData.append('name', data.name);
   formData.append('privacy', data.privacy);
 
@@ -29,8 +29,13 @@ const token = await SecureStore.getItemAsync('tasker_backend_jwt');
       type,
     } as any);
   }
-console.log(formData)
+  console.log(formData);
   return api.post('/teams', formData, {
-    headers: { 'Content-Type': 'multipart/form-data','Authorization':`Bearer ${token}` },
+    headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
   });
 };
+export const getTeamById = (id: string) => api.get(`/teams/${id}`);
+export const updateTeam = (id: string, data: any) => api.patch(`/teams/${id}`, data);
+export const deleteTeam = (id: string) => api.delete(`/teams/${id}`);
+
+export const inviteMemeber = (id: string, data: any) => api.post(`/invites/team/${id}`,data);

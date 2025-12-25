@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, ScrollView, Pressable, Image, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { Plus, Users, ChevronRight } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 import { getTeams } from '@/lib/services/teams';
@@ -44,23 +44,23 @@ export default function TeamsScreen() {
         <ScrollView className="flex-1">
           <View className="space-y-4 px-5 py-6">
             {teams.map((team: any) => (
-              <Pressable
-                key={team.id}
-                className="flex-row items-center justify-between rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
-                <View className="flex-row items-center">
-                  <Image
-                    source={{ uri: team.avatar || 'https://i.pravatar.cc/150?img=1' }}
-                    className="mr-4 h-16 w-16 rounded-2xl"
-                  />
-                  <View>
-                    <Text className="text-lg font-bold text-gray-900">{team.name}</Text>
-                    <Text className="text-sm text-gray-500">
-                      {team.members.length} member{team.members.length > 1 ? 's' : ''}
-                    </Text>
+              <Link href={`/teams/${team.id}`} key={team.id} asChild>
+                <Pressable className="flex-row items-center justify-between rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
+                  <View className="flex-row items-center">
+                    <Image
+                      source={{ uri: team.avatar || 'https://i.pravatar.cc/150?img=1' }}
+                      className="mr-4 h-16 w-16 rounded-2xl"
+                    />
+                    <View>
+                      <Text className="text-lg font-bold text-gray-900">{team.name}</Text>
+                      <Text className="text-sm text-gray-500">
+                        {team.members.length} member{team.members.length > 1 ? 's' : ''}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                <ChevronRight size={24} color="#9CA3AF" />
-              </Pressable>
+                  <ChevronRight size={24} color="#9CA3AF" />
+                </Pressable>
+              </Link>
             ))}
           </View>
         </ScrollView>
