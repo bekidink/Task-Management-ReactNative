@@ -8,21 +8,10 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
-import {
-  Search,
-  Plus,
-  X,
-  Check,
-  Circle,
-  Flag,
-  Clock,
-  ChevronDown,
-  Calendar,
-} from 'lucide-react-native';
+import { Search, Plus, Check, Circle, Flag, Calendar } from 'lucide-react-native';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -31,9 +20,10 @@ import {
   getMyCreatedTasks,
   createTask,
   updateTaskStatus,
-  toggleTaskFlag,
+  // toggleTaskFlag,
 } from '@/lib/services/tasks';
 import { getProjects } from '@/lib/services/projects';
+import TaskForm from '@/components/task/TaskForm';
 
 type Task = {
   id: string;
@@ -47,12 +37,6 @@ type Task = {
   _count?: { comments: number };
 };
 
-type Project = {
-  id: string;
-  name: string;
-  _count: { tasks: number };
-};
-
 type TabType = 'assigned' | 'created';
 
 export default function TasksScreen() {
@@ -62,10 +46,7 @@ export default function TasksScreen() {
   const snapPoints = useMemo(() => ['94%'], []);
 
   const [activeTab, setActiveTab] = useState<TabType>('assigned');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>();
 
   // Fetch tasks based on active tab
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
@@ -74,7 +55,7 @@ export default function TasksScreen() {
     select: (res) =>
       res.data.map((t: any) => ({
         ...t,
-        flagged: t.flagged || t.flag === 'FLAGGED', // handle both boolean and enum
+        flagged: t.flagged || t.flag === 'FLAGGED',
       })),
   });
 
@@ -87,14 +68,39 @@ export default function TasksScreen() {
 
   // Auto-select first project when projects load
   useEffect(() => {
-    if (projects.length > 0 && !selectedProject) {
-      setSelectedProject(projects[0]);
+    if (projects.length > 0 && !selectedProjectId) {
+      setSelectedProjectId(projects[0].id);
     }
-  }, [projects, selectedProject]);
+  }, [projects, selectedProjectId]);
 
-  // Mutations
+  // Create task mutation
   const createMutation = useMutation({
-    mutationFn: createTask,
+    mutationFn: (data: {
+      title: string;
+      description?: string | null;
+      projectId: string;
+      priority: 'LOW' | 'MEDIUM' | 'HIGH';
+      attachments?: any[];
+    }) => {
+      const formData = new FormData();
+
+      // Add text fields
+      formData.append('title', data.title);
+      formData.append('projectId', data.projectId);
+      formData.append('priority', data.priority);
+      if (data.description) {
+        formData.append('description', data.description);
+      }
+
+      // Add attachments if any
+      if (data.attachments && data.attachments.length > 0) {
+        data.attachments.forEach((attachment, index) => {
+          formData.append('files', attachment);
+        });
+      }
+
+      return createTask(formData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', activeTab] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
@@ -112,38 +118,21 @@ export default function TasksScreen() {
     },
   });
 
-  const toggleFlagMutation = useMutation({
-    mutationFn: toggleTaskFlag,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    },
-  });
+  // const toggleFlagMutation = useMutation({
+  //   mutationFn: toggleTaskFlag,
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ['tasks'] });
+  //   },
+  // });
 
   const openSheet = () => bottomSheetRef.current?.snapToIndex(0);
 
   const closeSheet = () => {
     bottomSheetRef.current?.close();
-    setTitle('');
-    setDescription('');
-    setShowProjectDropdown(false);
   };
 
-  const handleCreateTask = () => {
-    if (!title.trim()) {
-      Alert.alert('Error', 'Task title is required');
-      return;
-    }
-    if (!selectedProject) {
-      Alert.alert('Error', 'Please select a project');
-      return;
-    }
-
-    createMutation.mutate({
-      title: title.trim(),
-      description: description.trim() || null,
-      projectId: selectedProject.id,
-      priority: 'MEDIUM',
-    });
+  const handleCreateTask = async (data: any) => {
+    await createMutation.mutateAsync(data);
   };
 
   const formatDate = (dateString: string | null) => {
@@ -175,7 +164,7 @@ export default function TasksScreen() {
 
         <View className="mb-4 flex-row items-center rounded-2xl border border-gray-200 bg-white px-4 py-3.5 shadow-sm">
           <Search size={20} color="#9CA3AF" className="mr-3" />
-          <TextInput placeholder="Search tasks..." className="flex-1 text-gray-700 h-5" />
+          <TextInput placeholder="Search tasks..." className="h-5 flex-1 text-gray-700" />
         </View>
 
         <View className="flex-row rounded-2xl bg-white p-1 shadow-sm">
@@ -218,7 +207,7 @@ export default function TasksScreen() {
                 renderRightActions={() => (
                   <View className="flex-row">
                     <Pressable
-                      onPress={() => toggleFlagMutation.mutate(task.id)}
+                      // onPress={() => toggleFlagMutation.mutate(task.id)}
                       className="justify-center bg-orange-500 px-7">
                       <Flag size={24} color="white" fill={task.flagged ? 'white' : 'none'} />
                     </Pressable>
@@ -247,7 +236,6 @@ export default function TasksScreen() {
                           }`}>
                           {task.title}
                         </Text>
-                        
 
                         {task.endDate && (
                           <View className="mt-3 flex-row items-center">
@@ -296,100 +284,15 @@ export default function TasksScreen() {
         onClose={closeSheet}
         backgroundStyle={{ backgroundColor: '#FFFFFF' }}
         handleIndicatorStyle={{ backgroundColor: '#D1D5DB', width: 40 }}>
-        <View className="flex-1">
-          <View className="flex-row items-center justify-between px-6 pb-3 pt-4">
-            <Text className="text-2xl font-bold text-gray-900">Create Task</Text>
-            <Pressable onPress={closeSheet}>
-              <X size={26} color="#6B7280" />
-            </Pressable>
-          </View>
-
-          <BottomSheetScrollView>
-            <View className="px-6 pb-20">
-              {/* Task Title */}
-              <Text className="mb-2 mt-4 text-sm font-medium text-gray-700">Task Title</Text>
-              <TextInput
-                placeholder="Enter task title"
-                value={title}
-                onChangeText={setTitle}
-                className="rounded-2xl border border-gray-300 bg-white px-5 py-4 text-base"
-              />
-
-              {/* Project Selector */}
-              <Text className="mb-2 mt-6 text-sm font-medium text-gray-700">Project</Text>
-              <Pressable
-                onPress={() => setShowProjectDropdown(!showProjectDropdown)}
-                className="flex-row items-center justify-between rounded-2xl border border-gray-300 bg-white px-5 py-4">
-                <Text
-                  className={`text-base ${selectedProject ? 'text-gray-900' : 'text-gray-500'}`}>
-                  {selectedProject?.name || 'Select a project'}
-                </Text>
-                <ChevronDown
-                  size={20}
-                  color="#9333EA"
-                  style={{ transform: [{ rotate: showProjectDropdown ? '180deg' : '0deg' }] }}
-                />
-              </Pressable>
-
-              {showProjectDropdown && (
-                <View className="mt-2 max-h-64 rounded-2xl border border-gray-200 bg-white shadow-lg">
-                  <ScrollView nestedScrollEnabled>
-                    {projectsLoading ? (
-                      <ActivityIndicator color="#9333EA" className="py-6" />
-                    ) : projects.length === 0 ? (
-                      <Text className="py-6 text-center text-gray-500">No projects available</Text>
-                    ) : (
-                      projects.map((project: Project) => (
-                        <Pressable
-                          key={project.id}
-                          onPress={() => {
-                            setSelectedProject(project);
-                            setShowProjectDropdown(false);
-                          }}
-                          className="border-b border-gray-100 px-5 py-4 last:border-b-0">
-                          <Text className="font-medium text-gray-900">{project.name}</Text>
-                          <Text className="text-xs text-gray-500">
-                            {project._count.tasks} task{project._count.tasks !== 1 ? 's' : ''}
-                          </Text>
-                        </Pressable>
-                      ))
-                    )}
-                  </ScrollView>
-                </View>
-              )}
-
-              {/* Description */}
-              <Text className="mb-2 mt-6 text-sm font-medium text-gray-700">
-                Description (Optional)
-              </Text>
-              <TextInput
-                placeholder="Add a description..."
-                value={description}
-                onChangeText={setDescription}
-                multiline
-                numberOfLines={5}
-                className="rounded-2xl border border-gray-300 bg-white px-5 py-4"
-                style={{ textAlignVertical: 'top' }}
-              />
-
-              {/* Create Button */}
-              <Pressable
-                onPress={handleCreateTask}
-                disabled={createMutation.isPending || !title.trim() || !selectedProject}
-                className={`mt-10 rounded-2xl py-5 ${
-                  title.trim() && selectedProject && !createMutation.isPending
-                    ? 'bg-purple-600'
-                    : 'bg-gray-300'
-                }`}>
-                {createMutation.isPending ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text className="text-center text-lg font-bold text-white">Create Task</Text>
-                )}
-              </Pressable>
-            </View>
-          </BottomSheetScrollView>
-        </View>
+        <TaskForm
+          mode="create"
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+          onSelectProject={setSelectedProjectId}
+          onSubmit={handleCreateTask}
+          onCancel={closeSheet}
+          isSubmitting={createMutation.isPending}
+        />
       </BottomSheet>
     </View>
   );

@@ -28,7 +28,7 @@ import {
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Menu, MenuOptions, MenuOption, MenuTrigger } from 'react-native-popup-menu';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getProjectById, updateProject, deleteProject } from '@/lib/services/projects';
+import { getProjectById, updateProject,  } from '@/lib/services/projects';
 import Header from '@/components/layout/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
